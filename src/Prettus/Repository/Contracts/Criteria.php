@@ -6,15 +6,15 @@ namespace Prettus\Repository\Contracts;
  * @package Prettus\Repository\Contracts
  * @author Anderson Andrade <contato@andersonandra.de>
  */
-interface CriteriaInterface
+interface Criteria
 {
     /**
      * Apply criteria in query repository
      *
      * @param                     $model
-     * @param RepositoryInterface $repository
+     * @param $context
      *
      * @return mixed
      */
-    public function apply($model, RepositoryInterface $repository);
+    public function apply($model, $context);
 }

@@ -28,11 +28,11 @@ class $CLASS$RepositoryEloquent extends BaseRepository implements $CLASS$Reposit
     $VALIDATOR$
 
     /**
-     * Boot up the repository, pushing criteria
+     * Boot up the repository
      */
     public function boot()
     {
-        $this->pushCriteria(app(RequestCriteria::class));
+        //
     }
-    
+
 }

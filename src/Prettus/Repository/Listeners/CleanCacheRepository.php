@@ -6,7 +6,7 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
-use Prettus\Repository\Contracts\RepositoryInterface;
+use Prettus\Repository\Contracts\Repository;
 use Prettus\Repository\Events\RepositoryEventBase;
 use Prettus\Repository\Helpers\CacheKeys;
 
@@ -24,7 +24,7 @@ class CleanCacheRepository
     protected $cache = null;
 
     /**
-     * @var RepositoryInterface
+     * @var Repository
      */
     protected $repository = null;
 

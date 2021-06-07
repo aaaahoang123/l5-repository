@@ -3,7 +3,7 @@
 namespace Prettus\Repository\Traits;
 
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
-use Prettus\Repository\Contracts\CriteriaInterface;
+use Prettus\Repository\Contracts\Criteria;
 use Prettus\Repository\Helpers\CacheKeys;
 use ReflectionObject;
 use Exception;
@@ -151,8 +151,8 @@ trait CacheableRepository
     /**
      * Serialize single criterion with customized serialization of Closures.
      *
-     * @param  \Prettus\Repository\Contracts\CriteriaInterface $criterion
-     * @return \Prettus\Repository\Contracts\CriteriaInterface|array
+     * @param  \Prettus\Repository\Contracts\Criteria $criterion
+     * @return \Prettus\Repository\Contracts\Criteria|array
      *
      * @throws \Exception
      */
@@ -319,11 +319,11 @@ trait CacheableRepository
     /**
      * Find data by Criteria
      *
-     * @param CriteriaInterface $criteria
+     * @param Criteria $criteria
      *
      * @return mixed
      */
-    public function getByCriteria(CriteriaInterface $criteria)
+    public function getByCriteria(Criteria $criteria)
     {
         if (!$this->allowedCache('getByCriteria') || $this->isSkippedCache()) {
             return parent::getByCriteria($criteria);

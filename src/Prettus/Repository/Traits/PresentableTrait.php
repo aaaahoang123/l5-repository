@@ -3,7 +3,7 @@
 namespace Prettus\Repository\Traits;
 
 use Illuminate\Support\Arr;
-use Prettus\Repository\Contracts\PresenterInterface;
+use Prettus\Repository\Contracts\Presenter;
 
 /**
  * Class PresentableTrait
@@ -14,16 +14,16 @@ trait PresentableTrait
 {
 
     /**
-     * @var PresenterInterface
+     * @var Presenter
      */
     protected $presenter = null;
 
     /**
-     * @param \Prettus\Repository\Contracts\PresenterInterface $presenter
+     * @param \Prettus\Repository\Contracts\Presenter $presenter
      *
      * @return $this
      */
-    public function setPresenter(PresenterInterface $presenter)
+    public function setPresenter(Presenter $presenter)
     {
         $this->presenter = $presenter;
 
@@ -52,7 +52,7 @@ trait PresentableTrait
      */
     protected function hasPresenter()
     {
-        return isset($this->presenter) && $this->presenter instanceof PresenterInterface;
+        return isset($this->presenter) && $this->presenter instanceof Presenter;
     }
 
     /**

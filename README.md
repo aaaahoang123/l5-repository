@@ -1,6 +1,9 @@
-# Laravel 5 Repositories
+# Laravel Pure Criteria Repositories
+## A folk from Laravel 5 Repositories
 
 Laravel 5 Repositories is used to abstract the data layer, making our application more flexible to maintain.
+
+Difference with base code, pure criteria repositories will separate the logics to build criteria list to the out sider
 
 [![Latest Stable Version](https://poser.pugx.org/prettus/l5-repository/v/stable)](https://packagist.org/packages/prettus/l5-repository) [![Total Downloads](https://poser.pugx.org/prettus/l5-repository/downloads)](https://packagist.org/packages/prettus/l5-repository) [![Latest Unstable Version](https://poser.pugx.org/prettus/l5-repository/v/unstable)](https://packagist.org/packages/prettus/l5-repository) [![License](https://poser.pugx.org/prettus/l5-repository/license)](https://packagist.org/packages/prettus/l5-repository)
 [![Analytics](https://ga-beacon.appspot.com/UA-61050740-1/l5-repository/readme)](https://packagist.org/packages/prettus/l5-repository)
@@ -453,12 +456,12 @@ Criteria are a way to change the repository of the query by applying specific co
 
 ```php
 
-use Prettus\Repository\Contracts\RepositoryInterface;
-use Prettus\Repository\Contracts\CriteriaInterface;
+use Prettus\Repository\Contracts\Repository;
+use Prettus\Repository\Contracts\Criteria;
 
-class MyCriteria implements CriteriaInterface {
+class MyCriteria implements Criteria {
 
-    public function apply($model, RepositoryInterface $repository)
+    public function apply($model, Repository $repository)
     {
         $model = $model->where('user_id','=', Auth::user()->id );
         return $model;
@@ -488,57 +491,21 @@ class PostsController extends BaseController {
 
     public function index()
     {
-        $this->repository->pushCriteria(new MyCriteria1());
-        $this->repository->pushCriteria(MyCriteria2::class);
-        $posts = $this->repository->all();
+        $id = 1;
+        $criteria = [
+            new MyCriteria1(),
+            new MyCriteria2($id)
+        ];
+
+        $posts = $this->repository->findAllByCriteria($criteria);
+        // or
+        $posts = $this->repository->findAllByCriteria(...$criteria);
+        // or
+        $posts = $this->repository->findAllByCriteria(new MyCriteria1(), new MyCriteria2($id));
 		...
     }
 
 }
-```
-
-Getting results from Criteria
-
-```php
-$posts = $this->repository->getByCriteria(new MyCriteria());
-```
-
-Setting the default Criteria in Repository
-
-```php
-use Prettus\Repository\Eloquent\BaseRepository;
-
-class PostRepository extends BaseRepository {
-
-    public function boot(){
-        $this->pushCriteria(new MyCriteria());
-        // or
-        $this->pushCriteria(AnotherCriteria::class);
-        ...
-    }
-
-    function model(){
-       return "App\\Post";
-    }
-}
-```
-
-### Skip criteria defined in the repository
-
-Use `skipCriteria` before any other chaining method
-
-```php
-$posts = $this->repository->skipCriteria()->all();
-```
-
-### Popping criteria
-
-Use `popCriteria` to remove a criteria
-
-```php
-$this->repository->popCriteria(new Criteria1());
-// or
-$this->repository->popCriteria(Criteria1::class);
 ```
 
 
@@ -549,34 +516,6 @@ RequestCriteria is a standard Criteria implementation. It enables filters to per
 You can perform a dynamic search, filter the data and customize the queries.
 
 To use the Criteria in your repository, you can add a new criteria in the boot method of your repository, or directly use in your controller, in order to filter out only a few requests.
-
-#### Enabling in your Repository
-
-```php
-use Prettus\Repository\Eloquent\BaseRepository;
-use Prettus\Repository\Criteria\RequestCriteria;
-
-
-class PostRepository extends BaseRepository {
-
-	/**
-     * @var array
-     */
-    protected $fieldSearchable = [
-        'name',
-        'email'
-    ];
-
-    public function boot(){
-        $this->pushCriteria(app('Prettus\Repository\Criteria\RequestCriteria'));
-        ...
-    }
-
-    function model(){
-       return "App\\Post";
-    }
-}
-```
 
 Remember, you need to define which fields from the model can be searchable.
 
@@ -598,82 +537,6 @@ protected $fieldSearchable = [
 	'email', // Default Condition "="
 	'your_field'=>'condition'
 ];
-```
-
-
-#### Enabling in your Controller
-
-```php
-	public function index()
-    {
-        $this->repository->pushCriteria(app('Prettus\Repository\Criteria\RequestCriteria'));
-        $posts = $this->repository->all();
-		...
-    }
-```
-
-#### Example the Criteria
-
-Request all data without filter by request
-
-`http://prettus.local/users`
-
-```json
-[
-    {
-        "id": 1,
-        "name": "John Doe",
-        "email": "john@gmail.com",
-        "created_at": "-0001-11-30 00:00:00",
-        "updated_at": "-0001-11-30 00:00:00"
-    },
-    {
-        "id": 2,
-        "name": "Lorem Ipsum",
-        "email": "lorem@ipsum.com",
-        "created_at": "-0001-11-30 00:00:00",
-        "updated_at": "-0001-11-30 00:00:00"
-    },
-    {
-        "id": 3,
-        "name": "Laravel",
-        "email": "laravel@gmail.com",
-        "created_at": "-0001-11-30 00:00:00",
-        "updated_at": "-0001-11-30 00:00:00"
-    }
-]
-```
-
-Conducting research in the repository
-
-`http://prettus.local/users?search=John%20Doe`
-
-or
-
-`http://prettus.local/users?search=John&searchFields=name:like`
-
-or
-
-`http://prettus.local/users?search=john@gmail.com&searchFields=email:=`
-
-or
-
-`http://prettus.local/users?search=name:John Doe;email:john@gmail.com`
-
-or
-
-`http://prettus.local/users?search=name:John;email:john@gmail.com&searchFields=name:like;email:=`
-
-```json
-[
-    {
-        "id": 1,
-        "name": "John Doe",
-        "email": "john@gmail.com",
-        "created_at": "-0001-11-30 00:00:00",
-        "updated_at": "-0001-11-30 00:00:00"
-    }
-]
 ```
 
 By default RequestCriteria makes its queries using the **OR** comparison operator for each query parameter.
@@ -855,7 +718,7 @@ Result will have something like this
    ]
 ```
 
-WhereIn filter 
+WhereIn filter
 
 `http://prettus.local/product?search=price:300,500&searchFields=price:in`
 
@@ -885,10 +748,10 @@ Implements the interface CacheableInterface and use CacheableRepository Trait.
 
 ```php
 use Prettus\Repository\Eloquent\BaseRepository;
-use Prettus\Repository\Contracts\CacheableInterface;
+use Prettus\Repository\Contracts\Cacheable;
 use Prettus\Repository\Traits\CacheableRepository;
 
-class PostRepository extends BaseRepository implements CacheableInterface {
+class PostRepository extends BaseRepository implements Cacheable {
 
     use CacheableRepository;
 
@@ -949,10 +812,10 @@ It is possible to override these settings directly in the repository.
 
 ```php
 use Prettus\Repository\Eloquent\BaseRepository;
-use Prettus\Repository\Contracts\CacheableInterface;
+use Prettus\Repository\Contracts\Cacheable;
 use Prettus\Repository\Traits\CacheableRepository;
 
-class PostRepository extends BaseRepository implements CacheableInterface {
+class PostRepository extends BaseRepository implements Cacheable {
 
     // Setting the lifetime of the cache to a repository specifically
     protected $cacheMinutes = 90;

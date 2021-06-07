@@ -2,25 +2,27 @@
 
 $NAMESPACE$
 
-use Prettus\Repository\Contracts\CriteriaInterface;
-use Prettus\Repository\Contracts\RepositoryInterface;
+use Prettus\Repository\Contracts\Criteria;
+use Prettus\Repository\Contracts\Repository;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class $CLASS$Criteria.
  *
  * @package $NAMESPACE$
  */
-class $CLASS$Criteria implements CriteriaInterface
+class $CLASS$Criteria implements Criteria
 {
     /**
      * Apply criteria in query repository
      *
-     * @param string              $model
-     * @param RepositoryInterface $repository
+     * @param Model|Builder $model
+     * @param Repository $repository
      *
      * @return mixed
      */
-    public function apply($model, RepositoryInterface $repository)
+    public function apply($model, Repository $repository)
     {
         return $model;
     }

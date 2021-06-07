@@ -9,11 +9,11 @@ namespace Prettus\Repository\Contracts;
 interface Presentable
 {
     /**
-     * @param PresenterInterface $presenter
+     * @param Presenter $presenter
      *
      * @return mixed
      */
-    public function setPresenter(PresenterInterface $presenter);
+    public function setPresenter(Presenter $presenter);
 
     /**
      * @return mixed

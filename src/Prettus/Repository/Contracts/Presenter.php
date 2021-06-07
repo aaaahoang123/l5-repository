@@ -6,7 +6,7 @@ namespace Prettus\Repository\Contracts;
  * @package Prettus\Repository\Contracts
  * @author Anderson Andrade <contato@andersonandra.de>
  */
-interface PresenterInterface
+interface Presenter
 {
     /**
      * Prepare data to present

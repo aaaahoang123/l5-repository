@@ -6,7 +6,7 @@ namespace Prettus\Repository\Contracts;
  * @package Prettus\Repository\Contracts
  * @author Anderson Andrade <contato@andersonandra.de>
  */
-interface RepositoryInterface
+interface Repository
 {
 
     /**
@@ -296,6 +296,13 @@ interface RepositoryInterface
      * @return mixed
      */
     public function firstOrCreate(array $attributes = []);
+
+    /**
+     * @param array $where
+     *
+     * @return boolean
+     */
+    public function exists($where);
 
     /**
      * Trigger static method calls to the model

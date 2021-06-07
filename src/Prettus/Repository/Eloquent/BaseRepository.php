@@ -8,11 +8,11 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use Prettus\Repository\Contracts\CriteriaInterface;
+use Prettus\Repository\Contracts\Criteria;
 use Prettus\Repository\Contracts\Presentable;
-use Prettus\Repository\Contracts\PresenterInterface;
-use Prettus\Repository\Contracts\RepositoryCriteriaInterface;
-use Prettus\Repository\Contracts\RepositoryInterface;
+use Prettus\Repository\Contracts\Presenter;
+use Prettus\Repository\Contracts\CriteriaExecutor;
+use Prettus\Repository\Contracts\Repository;
 use Prettus\Repository\Events\RepositoryEntityCreated;
 use Prettus\Repository\Events\RepositoryEntityCreating;
 use Prettus\Repository\Events\RepositoryEntityDeleted;
@@ -20,6 +20,7 @@ use Prettus\Repository\Events\RepositoryEntityDeleting;
 use Prettus\Repository\Events\RepositoryEntityUpdated;
 use Prettus\Repository\Events\RepositoryEntityUpdating;
 use Prettus\Repository\Exceptions\RepositoryException;
+use Prettus\Repository\Traits\CanApplyCriteria;
 use Prettus\Repository\Traits\ComparesVersionsTrait;
 use Prettus\Validator\Contracts\ValidatorInterface;
 use Prettus\Validator\Exceptions\ValidatorException;
@@ -29,9 +30,9 @@ use Prettus\Validator\Exceptions\ValidatorException;
  * @package Prettus\Repository\Eloquent
  * @author Anderson Andrade <contato@andersonandra.de>
  */
-abstract class BaseRepository implements RepositoryInterface, RepositoryCriteriaInterface
+abstract class BaseRepository implements Repository, CriteriaExecutor
 {
-    use ComparesVersionsTrait;
+    use ComparesVersionsTrait, CanApplyCriteria;
 
     /**
      * @var Application
@@ -39,7 +40,7 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
     protected $app;
 
     /**
-     * @var Model
+     * @var Model|Builder
      */
     protected $model;
 
@@ -49,7 +50,7 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
     protected $fieldSearchable = [];
 
     /**
-     * @var PresenterInterface
+     * @var Presenter
      */
     protected $presenter;
 
@@ -75,11 +76,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
     /**
      * @var bool
      */
-    protected $skipCriteria = false;
-
-    /**
-     * @var bool
-     */
     protected $skipPresenter = false;
 
     /**
@@ -93,7 +89,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
     public function __construct(Application $app)
     {
         $this->app = $app;
-        $this->criteria = new Collection();
         $this->makeModel();
         $this->makePresenter();
         $this->makeValidator();
@@ -199,7 +194,7 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
     /**
      * @param null $presenter
      *
-     * @return PresenterInterface
+     * @return Presenter
      * @throws RepositoryException
      */
     public function makePresenter($presenter = null)
@@ -209,7 +204,7 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
         if (!is_null($presenter)) {
             $this->presenter = is_string($presenter) ? $this->app->make($presenter) : $presenter;
 
-            if (!$this->presenter instanceof PresenterInterface) {
+            if (!$this->presenter instanceof Presenter) {
                 throw new RepositoryException("Class {$presenter} must be an instance of Prettus\\Repository\\Contracts\\PresenterInterface");
             }
 
@@ -276,8 +271,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function lists($column, $key = null)
     {
-        $this->applyCriteria();
-
         return $this->model->lists($column, $key);
     }
 
@@ -291,8 +284,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function pluck($column, $key = null)
     {
-        $this->applyCriteria();
-
         return $this->model->pluck($column, $key);
     }
 
@@ -332,7 +323,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function all($columns = ['*'])
     {
-        $this->applyCriteria();
         $this->applyScope();
 
         if ($this->model instanceof Builder) {
@@ -357,7 +347,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function count(array $where = [], $columns = '*')
     {
-        $this->applyCriteria();
         $this->applyScope();
 
         if ($where) {
@@ -393,7 +382,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function first($columns = ['*'])
     {
-        $this->applyCriteria();
         $this->applyScope();
 
         $results = $this->model->first($columns);
@@ -412,7 +400,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function firstOrNew(array $attributes = [])
     {
-        $this->applyCriteria();
         $this->applyScope();
 
         $temporarySkipPresenter = $this->skipPresenter;
@@ -435,7 +422,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function firstOrCreate(array $attributes = [])
     {
-        $this->applyCriteria();
         $this->applyScope();
 
         $temporarySkipPresenter = $this->skipPresenter;
@@ -447,6 +433,19 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
         $this->resetModel();
 
         return $this->parserResult($model);
+    }
+
+    public function exists($where)
+    {
+        $this->applyScope();
+        $this->applyConditions($where);
+
+        $result = $this->model
+            ->exists();
+
+        $this->resetModel();
+
+        return $result;
     }
 
     /**
@@ -476,7 +475,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function paginate($limit = null, $columns = ['*'], $method = "paginate")
     {
-        $this->applyCriteria();
         $this->applyScope();
         $limit = is_null($limit) ? config('repository.pagination.limit', 15) : $limit;
         $results = $this->model->{$method}($limit, $columns);
@@ -509,7 +507,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function find($id, $columns = ['*'])
     {
-        $this->applyCriteria();
         $this->applyScope();
         $model = $this->model->findOrFail($id, $columns);
         $this->resetModel();
@@ -528,7 +525,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function findByField($field, $value = null, $columns = ['*'])
     {
-        $this->applyCriteria();
         $this->applyScope();
         $model = $this->model->where($field, '=', $value)->get($columns);
         $this->resetModel();
@@ -546,7 +542,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function findWhere(array $where, $columns = ['*'])
     {
-        $this->applyCriteria();
         $this->applyScope();
 
         $this->applyConditions($where);
@@ -568,7 +563,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function findWhereIn($field, array $values, $columns = ['*'])
     {
-        $this->applyCriteria();
         $this->applyScope();
         $model = $this->model->whereIn($field, $values)->get($columns);
         $this->resetModel();
@@ -587,7 +581,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function findWhereNotIn($field, array $values, $columns = ['*'])
     {
-        $this->applyCriteria();
         $this->applyScope();
         $model = $this->model->whereNotIn($field, $values)->get($columns);
         $this->resetModel();
@@ -606,7 +599,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function findWhereBetween($field, array $values, $columns = ['*'])
     {
-        $this->applyCriteria();
         $this->applyScope();
         $model = $this->model->whereBetween($field, $values)->get($columns);
         $this->resetModel();
@@ -907,103 +899,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
     }
 
     /**
-     * Push Criteria for filter the query
-     *
-     * @param $criteria
-     *
-     * @return $this
-     * @throws \Prettus\Repository\Exceptions\RepositoryException
-     */
-    public function pushCriteria($criteria)
-    {
-        if (is_string($criteria)) {
-            $criteria = new $criteria;
-        }
-        if (!$criteria instanceof CriteriaInterface) {
-            throw new RepositoryException("Class " . get_class($criteria) . " must be an instance of Prettus\\Repository\\Contracts\\CriteriaInterface");
-        }
-        $this->criteria->push($criteria);
-
-        return $this;
-    }
-
-    /**
-     * Pop Criteria
-     *
-     * @param $criteria
-     *
-     * @return $this
-     */
-    public function popCriteria($criteria)
-    {
-        $this->criteria = $this->criteria->reject(function ($item) use ($criteria) {
-            if (is_object($item) && is_string($criteria)) {
-                return get_class($item) === $criteria;
-            }
-
-            if (is_string($item) && is_object($criteria)) {
-                return $item === get_class($criteria);
-            }
-
-            return get_class($item) === get_class($criteria);
-        });
-
-        return $this;
-    }
-
-    /**
-     * Get Collection of Criteria
-     *
-     * @return Collection
-     */
-    public function getCriteria()
-    {
-        return $this->criteria;
-    }
-
-    /**
-     * Find data by Criteria
-     *
-     * @param CriteriaInterface $criteria
-     *
-     * @return mixed
-     */
-    public function getByCriteria(CriteriaInterface $criteria)
-    {
-        $this->model = $criteria->apply($this->model, $this);
-        $results = $this->model->get();
-        $this->resetModel();
-
-        return $this->parserResult($results);
-    }
-
-    /**
-     * Skip Criteria
-     *
-     * @param bool $status
-     *
-     * @return $this
-     */
-    public function skipCriteria($status = true)
-    {
-        $this->skipCriteria = $status;
-
-        return $this;
-    }
-
-    /**
-     * Reset all Criterias
-     *
-     * @return $this
-     */
-    public function resetCriteria()
-    {
-        $this->criteria = new Collection();
-
-        return $this;
-    }
-
-    /**
      * Reset Query Scope
      *
      * @return $this
@@ -1025,30 +920,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
         if (isset($this->scopeQuery) && is_callable($this->scopeQuery)) {
             $callback = $this->scopeQuery;
             $this->model = $callback($this->model);
-        }
-
-        return $this;
-    }
-
-    /**
-     * Apply criteria in current Query
-     *
-     * @return $this
-     */
-    protected function applyCriteria()
-    {
-        if ($this->skipCriteria === true) {
-            return $this;
-        }
-
-        $criteria = $this->getCriteria();
-
-        if ($criteria) {
-            foreach ($criteria as $c) {
-                if ($c instanceof CriteriaInterface) {
-                    $this->model = $c->apply($this->model, $this);
-                }
-            }
         }
 
         return $this;
@@ -1095,7 +966,7 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function parserResult($result)
     {
-        if ($this->presenter instanceof PresenterInterface) {
+        if ($this->presenter instanceof Presenter) {
             if ($result instanceof Collection || $result instanceof LengthAwarePaginator) {
                 $result->each(function ($model) {
                     if ($model instanceof Presentable) {
@@ -1114,6 +985,74 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
         }
 
         return $result;
+    }
+
+    public function pluckByCriteria($column, $criteria, ...$otherCriteria)
+    {
+        $query = $this->makeModel()->newQuery();
+        $query = $this->applyCriteriaToQuery($query, $criteria, ...$otherCriteria);
+        return $query->pluck($column);
+    }
+
+    public function findAllByCriteria($criteria, ...$otherCriteria)
+    {
+        $query = $this->makeModel()->newQuery();
+        $query = $this->applyCriteriaToQuery($query, $criteria, ...$otherCriteria);
+        return $query->get();
+    }
+
+    public function paginateByCriteria($limit, $criteria, ...$otherCriteria)
+    {
+        $query = $this->makeModel()->newQuery();
+        $query = $this->applyCriteriaToQuery($query, $criteria, ...$otherCriteria);
+        return $query->paginate($limit);
+    }
+
+    public function countByCriteria($criteria, ...$otherCriteria)
+    {
+        $query = $this->makeModel()->newQuery();
+        $query = $this->applyCriteriaToQuery($query, $criteria, ...$otherCriteria);
+        return $query->count();
+    }
+
+    public function firstByCriteria($criteria, ...$otherCriteria)
+    {
+        $query = $this->makeModel()->newQuery();
+        $query = $this->applyCriteriaToQuery($query, $criteria, ...$otherCriteria);
+        return $query->first();
+    }
+
+    public function firstOrNewByCriteria(array $attributes, $criteria, ...$otherCriteria)
+    {
+        $query = $this->makeModel()->newQuery();
+        $query = $this->applyCriteriaToQuery($query, $criteria, ...$otherCriteria);
+        return $query->firstOrNew($attributes);
+    }
+
+    public function firstOrCreateByCriteria(array $attributes, $criteria, ...$otherCriteria)
+    {
+        $query = $this->makeModel()->newQuery();
+        $query = $this->applyCriteriaToQuery($query, $criteria, ...$otherCriteria);
+        return $query->firstOrCreate($attributes);
+    }
+
+    public function firstOrFailsByCriteria($criteria, ...$otherCriteria)
+    {
+        $query = $this->makeModel()->newQuery();
+        $query = $this->applyCriteriaToQuery($query, $criteria, ...$otherCriteria);
+        return $query->firstOrFail();
+    }
+
+    public function findByCriteria($criteria, ...$otherCriteria)
+    {
+        return $this->firstOrFailsByCriteria($criteria, ...$otherCriteria);
+    }
+
+    public function existsByCriteria($criteria, ...$otherCriteria)
+    {
+        $query = $this->makeModel()->newQuery();
+        $query = $this->applyCriteriaToQuery($query, $criteria, ...$otherCriteria);
+        return $query->exists();
     }
 
     /**
@@ -1139,7 +1078,6 @@ abstract class BaseRepository implements RepositoryInterface, RepositoryCriteria
      */
     public function __call($method, $arguments)
     {
-        $this->applyCriteria();
         $this->applyScope();
 
         return call_user_func_array([$this->model, $method], $arguments);

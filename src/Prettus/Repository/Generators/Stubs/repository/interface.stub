@@ -2,14 +2,14 @@
 
 $NAMESPACE$
 
-use Prettus\Repository\Contracts\RepositoryInterface;
+use Prettus\Repository\Contracts\Repository;
 
 /**
  * Interface $CLASS$Repository.
  *
  * @package $NAMESPACE$
  */
-interface $CLASS$Repository extends RepositoryInterface
+interface $CLASS$Repository extends Repository
 {
     //
 }

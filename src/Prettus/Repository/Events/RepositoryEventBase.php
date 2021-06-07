@@ -2,7 +2,7 @@
 namespace Prettus\Repository\Events;
 
 use Illuminate\Database\Eloquent\Model;
-use Prettus\Repository\Contracts\RepositoryInterface;
+use Prettus\Repository\Contracts\Repository;
 
 /**
  * Class RepositoryEventBase
@@ -17,7 +17,7 @@ abstract class RepositoryEventBase
     protected $model;
 
     /**
-     * @var RepositoryInterface
+     * @var Repository
      */
     protected $repository;
 
@@ -27,10 +27,10 @@ abstract class RepositoryEventBase
     protected $action;
 
     /**
-     * @param RepositoryInterface $repository
+     * @param Repository $repository
      * @param Model               $model
      */
-    public function __construct(RepositoryInterface $repository, Model $model = null)
+    public function __construct(Repository $repository, Model $model = null)
     {
         $this->repository = $repository;
         $this->model = $model;
@@ -45,7 +45,7 @@ abstract class RepositoryEventBase
     }
 
     /**
-     * @return RepositoryInterface
+     * @return Repository
      */
     public function getRepository()
     {

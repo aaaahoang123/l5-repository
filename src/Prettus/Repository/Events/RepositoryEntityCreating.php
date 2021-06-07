@@ -3,7 +3,7 @@
 namespace Prettus\Repository\Events;
 
 use Illuminate\Database\Eloquent\Model;
-use Prettus\Repository\Contracts\RepositoryInterface;
+use Prettus\Repository\Contracts\Repository;
 
 /**
  * Class RepositoryEntityCreated
@@ -18,7 +18,7 @@ class RepositoryEntityCreating extends RepositoryEventBase
      */
     protected $action = "creating";
 
-    public function __construct(RepositoryInterface $repository, array $model)
+    public function __construct(Repository $repository, array $model)
     {
         parent::__construct($repository);
         $this->model = $model;

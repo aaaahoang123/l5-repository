@@ -5,15 +5,15 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Prettus\Repository\Contracts\CriteriaInterface;
-use Prettus\Repository\Contracts\RepositoryInterface;
+use Prettus\Repository\Contracts\Criteria;
+use Prettus\Repository\Contracts\Repository;
 
 /**
  * Class RequestCriteria
  * @package Prettus\Repository\Criteria
  * @author Anderson Andrade <contato@andersonandra.de>
  */
-class RequestCriteria implements CriteriaInterface
+class RequestCriteria implements Criteria
 {
     /**
      * @var \Illuminate\Http\Request
@@ -30,12 +30,12 @@ class RequestCriteria implements CriteriaInterface
      * Apply criteria in query repository
      *
      * @param         Builder|Model     $model
-     * @param RepositoryInterface $repository
+     * @param Repository $repository
      *
      * @return mixed
      * @throws \Exception
      */
-    public function apply($model, RepositoryInterface $repository)
+    public function apply($model, Repository $repository)
     {
         $fieldsSearchable = $repository->getFieldsSearchable();
         $search = $this->request->get(config('repository.criteria.params.search', 'search'), null);

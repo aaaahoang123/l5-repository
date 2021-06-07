@@ -8,7 +8,7 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
  * @package Prettus\Repository\Contracts
  * @author Anderson Andrade <contato@andersonandra.de>
  */
-interface CacheableInterface
+interface Cacheable
 {
     /**
      * Set Cache Repository
